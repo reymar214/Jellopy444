@@ -10,10 +10,7 @@ const crypto = require('crypto');
 const FormData = require('form-data');
 const net = require('node:net');
 
-const { checkFeed } = require('./events/checkFeed');
 const { scheduleModal, resumeEvents } = require('./commands/utility/event_schedule_modal.js');
-const { checkWebsiteForNewPosts } = require('./events/websiteChecker');
-const { initializeSitemapChecker } = require('./events/newROGGHLibraryPost');
 
 const client = new Client({
   intents: [
@@ -56,10 +53,6 @@ for (const file of eventFiles) {
   }
 }
 
-// Secure webhook URLs (load from env or keep empty if unused)
-const webhookURL = [process.env.WEBHOOK_FEED_URL || ''];
-const webhookWebsiteURL = [process.env.WEBHOOK_WEBSITE_URL || ''];
-
 // Modal handling
 client.on('interactionCreate', async interaction => {
   if (interaction.isModalSubmit() && interaction.customId === 'scheduleModal') {
@@ -75,67 +68,6 @@ client.once('ready', () => {
 
   console.log('Bot is ready!');
   resumeEvents(client);
-  initializeSitemapChecker(client);
-
-  let webhookInterval;
-  let websiteInterval;
-
-  function isWithinBusinessHours() {
-    const now = new Date();
-    const dayOfWeek = now.getDay();
-    const hours = now.getHours();
-    return dayOfWeek >= 1 && dayOfWeek <= 5 && hours >= 9 && hours < 18;
-  }
-
-  async function checkWebhooks() {
-    try {
-      await checkFeed(webhookURL);
-    } catch (error) {
-      console.error('Error in checkFeed:', error);
-    }
-  }
-
-  async function checkWebsite() {
-    try {
-      await checkWebsiteForNewPosts(webhookWebsiteURL);
-    } catch (error) {
-      console.error('Error in checkWebsiteForNewPosts:', error);
-    }
-  }
-
-  function startIntervals() {
-    if (!webhookInterval && !websiteInterval) {
-      console.log('Within business hours. Starting checks.');
-      webhookInterval = setInterval(checkWebhooks, 6 * 60 * 1000);
-      websiteInterval = setInterval(checkWebsite, 6 * 60 * 1000);
-    }
-  }
-
-  function stopIntervals() {
-    if (webhookInterval) {
-      clearInterval(webhookInterval);
-      webhookInterval = null;
-    }
-    if (websiteInterval) {
-      clearInterval(websiteInterval);
-      websiteInterval = null;
-    }
-  }
-
-  function checkBusinessHoursAndAdjustIntervals() {
-    if (isWithinBusinessHours()) {
-      if (!webhookInterval && !websiteInterval) {
-        startIntervals();
-        checkWebhooks();
-        checkWebsite();
-      }
-    } else {
-      stopIntervals();
-    }
-  }
-
-  setInterval(checkBusinessHoursAndAdjustIntervals, 60 * 1000);
-  checkBusinessHoursAndAdjustIntervals();
 });
 
 // Message filter
