@@ -1,0 +1,126 @@
+const LAST_POST_FILE_2 = 'last_post_2.txt';
+const WEBSITE_URL = 'https://ro.gnjoy.asia/news/index.php?type=3'; // URL to fetch titles and URLs
+const WEBHOOK_URL_2 = 'https://discord.com/api/webhooks/1275688282146996254/PU2W8WLYsqxK0kXH9uZru7qQkux-NMBkkxu4eBdE1O1XzcMuOlGO1UI_IpKOH1AMmvN4'; // Replace with the actual webhook URL
+
+function getLastPostId2() {
+    try {
+        if (fs.existsSync(LAST_POST_FILE_2)) {
+            return fs.readFileSync(LAST_POST_FILE_2, 'utf8').trim();
+        } else {
+            fs.writeFileSync(LAST_POST_FILE_2, '', 'utf8');
+            return null;
+        }
+    } catch (err) {
+        console.error('Error reading last post ID file:', err);
+        return null;
+    }
+}
+
+function saveLastPostId2(postId) {
+    try {
+        fs.writeFileSync(LAST_POST_FILE_2, postId, 'utf8');
+    } catch (err) {
+        console.error('Error saving last post ID:', err);
+    }
+}
+
+async function fetchDetailPageImage(link) {
+    try {
+        const response = await axios.get(link);
+        const $ = cheerio.load(response.data);
+        const image = $('article.news_content img').attr('src');
+        return image ? `${image}` : null;
+    } catch (error) {
+        console.error('Error fetching detail page:', error);
+        return null;
+    }
+}
+
+async function fetchWebsiteTitles() {
+    try {
+        const response = await axios.get(WEBSITE_URL);
+        const $ = cheerio.load(response.data);
+        const titles = {};
+
+        $('.content-berita').each((_, element) => {
+            const link = $(element).find('a').attr('href');
+            const fullLink = link ? `https://ro.gnjoy.asia/news/${link}` : null;
+            const title = $(element).find('.col-lg-8').text().trim();
+
+            if (title && fullLink) {
+                titles[title] = { link: fullLink, image: null }; // Initialize image as null
+            }
+        });
+
+        return titles;
+    } catch (error) {
+        console.error('Error fetching website titles:', error);
+        return {};
+    }
+}
+
+async function downloadImage(imageUrl) {
+    try {
+        const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+        const imagePath = `./image_cache/${Date.now()}.png`;
+        fs.writeFileSync(imagePath, response.data);
+        return imagePath;
+    } catch (error) {
+        console.error('Error downloading image:', error);
+        return null;
+    }
+}
+
+async function checkWebsiteForNewPosts() {
+    try {
+        const websiteTitles = await fetchWebsiteTitles();
+        const lastPostId = getLastPostId2();
+        let newPostFound = false;
+
+        for (const [title, { link }] of Object.entries(websiteTitles)) {
+            if (title === lastPostId) {
+                console.log('No new posts.');
+                return; // Exit if no new posts found
+            }
+
+            const imageUrl = await fetchDetailPageImage(link);
+            const imagePath = imageUrl ? await downloadImage(imageUrl) : null;
+
+            const embed = new EmbedBuilder()
+                .setColor(0x0099FF)
+                .setTitle(title)
+                .setURL(link)
+                .setDescription('ROGGH NEWS!')
+                .setImage(imageUrl || ''); // Set image URL if available
+
+            if (imagePath) {
+                // Post with image
+                const form = new FormData();
+                form.append('payload_json', JSON.stringify({ embeds: [embed.toJSON()] }));
+                form.append('file', fs.createReadStream(imagePath), { filename: 'image.png' });
+
+                await axios.post(WEBHOOK_URL_2, form, {
+                    headers: form.getHeaders()
+                });
+
+                // Optionally delete the cached image after posting
+                fs.unlinkSync(imagePath);
+            } else {
+                // Post without image
+                await axios.post(WEBHOOK_URL_2, {
+                    embeds: [embed.toJSON()]
+                });
+            }
+
+            saveLastPostId2(title);
+            newPostFound = true;
+            break; // Exit after finding the first new post
+        }
+
+        if (!newPostFound) {
+            console.log('No new posts.');
+        }
+    } catch (error) {
+        console.error('Error checking website for new posts:', error);
+    }
+}

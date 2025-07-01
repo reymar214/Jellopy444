@@ -1,0 +1,17 @@
+# Dependency directories
+node_modules/
+dist/
+coverage/
+logs/
+temp/
+
+# Lock file
+package-lock.json
+
+# Secrets
+.env
+config.json
+Token.txt
+json/*.json
+*.sqlite
+*.db
