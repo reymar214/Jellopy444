@@ -61,7 +61,7 @@ client.on('interactionCreate', async interaction => {
 });
 
 const cron = require('node-cron');
-const { generateBoosterReport } = require('./utils/boosterReporter');
+const { generateBoosterReport } = require('./utils/boosterreportlist.js');
 
 // Every 26th day of the month at 10:00 AM server time
 cron.schedule('0 10 26 * *', async () => {
@@ -71,6 +71,16 @@ cron.schedule('0 10 26 * *', async () => {
     console.error('Error generating booster report:', err);
   }
 });
+
+const { trackDailyBoosters } = require('./utils/boosterTracker');
+// Daily booster tracking
+// This will track boosters every day at 2:00 AM server time
+// Runs daily at 2:00 AM
+cron.schedule('0 2 * * *', () => {
+  trackDailyBoosters(client);
+});
+
+
 
 client.once('ready', () => {
   client.user.setPresence({
