@@ -29,9 +29,12 @@ module.exports = {
       const months = Math.floor(daysTotal / 30.44); // Average month length
       const days = Math.floor(daysTotal % 30.44);
 
-      message += `• ${member.user.tag} – Boosting since **<t:${Math.floor(start.getTime() / 1000)}:D>** (${months} month${months !== 1 ? 's' : ''}, ${days} day${days !== 1 ? 's' : ''})\n`;
+      message += `• <@${member.user.id}> – Boosting since **<t:${Math.floor(start.getTime() / 1000)}:D>** (${months} month${months !== 1 ? 's' : ''}, ${days} day${days !== 1 ? 's' : ''})\n`;
     });
 
-    await interaction.editReply({ content: message });
+    await interaction.editReply({
+	  content: message,
+	  allowedMentions: { parse: [] } // disables all pings
+});
   }
 };

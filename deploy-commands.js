@@ -1,5 +1,8 @@
 const { REST, Routes } = require('discord.js');
-const { clientId, guildId, token } = require('./config.json');
+require('dotenv').config();
+const token = process.env.DISCORD_TOKEN;
+const clientId = process.env.CLIENT_ID;
+const guildId = process.env.GUILD_ID;
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -31,7 +34,7 @@ const rest = new REST().setToken(token);
 (async () => {
 	try {
 		console.log(`Started refreshing ${commands.length} application (/) commands.`);
-		const guildIds = ['973562107599671307', '957853742936489995','1267829449504849991'];
+		const guildIds = ['912967074555527248'];
 		for (const guildId of guildIds) {
 		// The put method is used to fully refresh all commands in the guild with the current set
 		const data = await rest.put(

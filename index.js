@@ -60,6 +60,18 @@ client.on('interactionCreate', async interaction => {
   }
 });
 
+const cron = require('node-cron');
+const { generateBoosterReport } = require('./utils/boosterReporter');
+
+// Every 26th day of the month at 10:00 AM server time
+cron.schedule('0 10 26 * *', async () => {
+  try {
+    await generateBoosterReport(client); // you must pass your Discord client here
+  } catch (err) {
+    console.error('Error generating booster report:', err);
+  }
+});
+
 client.once('ready', () => {
   client.user.setPresence({
     activities: [{ name: 'with your heart', type: 0 }],
